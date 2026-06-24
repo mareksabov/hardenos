@@ -5,5 +5,6 @@
     ./sway.nix
     ./browser.nix
     ./terminal.nix
+    ./waybar.nix
   ];
 }
