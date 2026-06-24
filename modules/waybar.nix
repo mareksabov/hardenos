@@ -4,7 +4,7 @@ let
     {
       "layer": "top",
       "position": "top",
-      "mode": "hide",
+      "exclusive": false,
       "height": 26,
       "modules-left": [],
       "modules-center": ["clock"],
@@ -25,25 +25,37 @@ let
     #battery.warning { color: #e5c07b; }
     #battery.critical { color: #e06c75; }
   '';
-  # Jediný zdroj pravdy o viditeľnosti waybar = stavový súbor. waybar reaguje len na
-  # SIGUSR1=toggle, takže show/hide musíme robiť idempotentne podľa stavu. flock proti
-  # race (waycorner môže firovať z viacerých inštancií). Proces je ".waybar-wrapped"
-  # -> pkill BEZ -x (substring "waybar").
+  # START/KILL model: skutočný stav = beží waybar proces? (pgrep). Žiadne sledovanie
+  # stavu, ktoré by sa mohlo rozísť s realitou — akcia vždy vychádza zo skutočnosti.
+  # waybar je "exclusive": false -> prekrýva obsah bez rezervovania miesta (žiadny
+  # resize okien pri reveale). flock serializuje súbežné volania (waycorner môže firnúť
+  # rýchlo). Proces je ".waybar-wrapped" (NixOS wrapper).
   osBar = pkgs.writeShellApplication {
     name = "os-bar";
-    runtimeInputs = [ pkgs.procps pkgs.util-linux ];
+    runtimeInputs = [ pkgs.procps pkgs.util-linux pkgs.coreutils pkgs.waybar ];
     text = ''
-      marker=/tmp/.waybar_shown
       action="''${1:-toggle}"
       exec 9>/tmp/.waybar.lock
       flock 9
-      if [ "$action" = toggle ]; then
-        if [ -e "$marker" ]; then action=hide; else action=show; fi
+
+      running=0
+      if pgrep -x .waybar-wrapped >/dev/null 2>&1 || pgrep -x waybar >/dev/null 2>&1; then
+        running=1
       fi
-      case "$action" in
-        show) if [ ! -e "$marker" ]; then pkill -USR1 waybar || true; touch "$marker"; fi ;;
-        hide) if [ -e "$marker" ]; then pkill -USR1 waybar || true; rm -f "$marker"; fi ;;
-      esac
+
+      if [ "$action" = "toggle" ]; then
+        if [ "$running" -eq 1 ]; then action="hide"; else action="show"; fi
+      fi
+
+      if [ "$action" = "show" ]; then
+        if [ "$running" -eq 0 ]; then
+          # fd 9 zavrieme v dieťati, nech nedrží zámok
+          nohup waybar >/dev/null 2>&1 9>&- &
+        fi
+      elif [ "$action" = "hide" ]; then
+        pkill -x .waybar-wrapped >/dev/null 2>&1 || true
+        pkill -x waybar >/dev/null 2>&1 || true
+      fi
     '';
   };
   waycornerConfig = pkgs.writeText "waycorner.toml" ''
@@ -63,15 +75,10 @@ in
   environment.etc."waycorner/config.toml".source = waycornerConfig;
 
   environment.etc."sway/config.d/waybar.conf".text = ''
-    # waybar v "hide" móde (bez rezervovaného miesta). Po štarte vynútene skryjeme
-    # a zosúladíme stavový súbor (štartovací stav = skrytá).
-    exec waybar
-    exec sleep 1 && pkill -USR1 waybar && rm -f /tmp/.waybar_shown
-
-    # hover-reveal cez waycorner hot-edge na hornom okraji (size = výška lišty)
+    # waybar sa NEspúšťa pri štarte (skrytá = nebeží). Objaví sa až na hover.
     exec waycorner --config /etc/waycorner/config.toml
 
-    # fallback: $mod+b toggle (cez rovnaký helper -> bez rozsynchronizovania)
+    # fallback: $mod+b toggle (start/kill cez rovnaký helper)
     bindsym $mod+b exec os-bar toggle
   '';
 }
