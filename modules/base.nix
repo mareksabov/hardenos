@@ -21,5 +21,13 @@
     vim
   ];
 
+  # zram swap — komprimovaný swap v RAM. Kľúčové pre 4 GB cieľový notebook
+  # (Dell Latitude E5540, i5-4200U): viac browser inštancií per-workspace
+  # by inak narazilo na strop pamäte.
+  zramSwap = {
+    enable = true;
+    memoryPercent = 50;
+  };
+
   system.stateVersion = "25.11";
 }
