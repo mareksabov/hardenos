@@ -33,9 +33,10 @@ in
   environment.etc."xdg/waybar/style.css".source = waybarStyle;
 
   environment.etc."sway/config.d/waybar.conf".text = ''
-    # waybar v "hide" móde: skrytý, odkryje sa pri kurzore na hornom okraji
-    # (natívne cez gtk-layer-shell) alebo pri držaní $mod.
+    # waybar v "hide" móde (bez rezervovaného miesta). Po štarte ho raz skryjeme
+    # cez SIGUSR1 — vtedy hide-mode začne robiť hover-reveal na hornom okraji.
     exec waybar
+    exec sleep 1 && pkill -SIGUSR1 waybar
 
     # garantovaný fallback: $mod+b toggle viditeľnosti
     bindsym $mod+b exec pkill -SIGUSR1 waybar
