@@ -9,7 +9,7 @@
   i18n.defaultLocale = "en_US.UTF-8";
   console.keyMap = "us";
 
-  users.users.mareks = {
+  users.users.marky = {
     isNormalUser = true;
     description = "Marek";
     extraGroups = [ "wheel" "video" "input" ];

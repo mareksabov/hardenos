@@ -13,7 +13,7 @@
 - nixpkgs channel: `nixos-25.11` (zhodný pin v `flake.lock` pre oba hosty).
 - Bootloader: **systemd-boot** (UEFI).
 - **Bez home-manager** — všetka konfigurácia je čistý NixOS modul.
-- Primárny user: `mareks` (jeden human user); root login zakázaný cez konzolu kde sa dá.
+- Primárny user: `marky` (jeden human user); root login zakázaný cez konzolu kde sa dá.
 - Cieľové systémy: `aarch64-linux` (host `vm`), `x86_64-linux` (host `laptop`). Každý modul musí byť architektúrne nezávislý — žiadne natvrdo zadrátované `system`.
 - Hardening je prvotriedny cieľ: žiadne zbytočné služby, balíky ani SUID; každý pridaný daemon musí byť odôvodnený.
 - Browser: `ungoogled-chromium`. Jedna inštancia + vlastný `--user-data-dir` profil per workspace.
@@ -102,7 +102,7 @@ V dočasnom `/mnt/etc/nixos/configuration.nix` pred inštaláciou zabezpeč aspo
   boot.loader.efi.canTouchEfiVariables = true;
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   services.openssh.enable = true;
-  users.users.mareks = {
+  users.users.marky = {
     isNormalUser = true;
     extraGroups = [ "wheel" ];
     initialPassword = "changeme";
@@ -192,7 +192,7 @@ use flake
   i18n.defaultLocale = "en_US.UTF-8";
   console.keyMap = "us";
 
-  users.users.mareks = {
+  users.users.marky = {
     isNormalUser = true;
     description = "Marek";
     extraGroups = [ "wheel" "video" "input" ];
@@ -256,12 +256,12 @@ Expected (red, ak chýba súbor/syntax): chyba. (green): bez chýb pre oba hosty
 ```bash
 sudo nixos-rebuild switch --flake ~/os#vm
 ```
-Expected: build prejde, systém sa prepne. Po reboote sa prihlásiš ako `mareks`.
+Expected: build prejde, systém sa prepne. Po reboote sa prihlásiš ako `marky`.
 
 - [ ] **Step 12: Over autologin usera a flakes**
 
 ```bash
-whoami            # mareks (po prihlásení)
+whoami            # marky (po prihlásení)
 nix --version     # nix s flake podporou
 ```
 Expected: user existuje, `nix` funguje.
@@ -286,7 +286,7 @@ Pridá bezpečnostné minimum: firewall, sysctl hardening, `doas` namiesto `sudo
 - Modify: `modules/default.nix`
 
 **Interfaces:**
-- Consumes: `users.users.mareks` z `base.nix`.
+- Consumes: `users.users.marky` z `base.nix`.
 - Produces: `doas` ako priv-escalation (wheel group); aktívny firewall (default deny in).
 
 - [ ] **Step 1: Napíš `modules/hardening.nix`**
@@ -377,7 +377,7 @@ Nabootuje rovno do sway (zatiaľ prázdny). greetd spraví autologin a spustí s
 - Modify: `modules/default.nix`
 
 **Interfaces:**
-- Consumes: `users.users.mareks`.
+- Consumes: `users.users.marky`.
 - Produces: bežiaci sway na TTY1 po boote; sway config v `/etc/sway/config`; env premenná `SWAYSOCK` dostupná pre neskoršie skripty.
 
 - [ ] **Step 1: Napíš `modules/sway.nix`**
@@ -427,7 +427,7 @@ in
     enable = true;
     settings.default_session = {
       command = "${pkgs.sway}/bin/sway";
-      user = "mareks";
+      user = "marky";
     };
   };
 
@@ -464,7 +464,7 @@ V sway otvor TTY (`Ctrl+Alt+F2`), prihlás sa a:
 pgrep -a sway
 ls $XDG_RUNTIME_DIR/sway-ipc.* 2>/dev/null || echo "check SWAYSOCK in session"
 ```
-Expected: sway proces beží pre `mareks`.
+Expected: sway proces beží pre `marky`.
 
 - [ ] **Step 5: Commit**
 
