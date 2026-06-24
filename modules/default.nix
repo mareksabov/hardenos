@@ -4,5 +4,6 @@
     ./hardening.nix
     ./sway.nix
     ./browser.nix
+    ./terminal.nix
   ];
 }
