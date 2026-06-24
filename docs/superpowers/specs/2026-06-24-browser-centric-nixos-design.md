@@ -105,6 +105,16 @@ Vývoj prebieha na **M3 MacBooku Pro (aarch64)**, cieľový notebook je
   firmware) sa overí až na reálnom železe; logika OS sa správa identicky na
   oboch architektúrach.
 
+## 8b. Vývojárske prostredie (dev tooling)
+
+- **Flakes** — celý projekt je flake (potvrdené, povinné). Pinované vstupy
+  (`flake.lock`) = plná reprodukovateľnosť.
+- **`direnv` + `nix-direnv`** — automatické načítanie dev shellu pri vstupe do
+  repozitára. `.envrc` obsahuje `use flake`; `nix-direnv` cachuje shell, aby sa
+  načítaval rýchlo.
+- Flake vystavuje **`devShell`** s nástrojmi na prácu na projekte (formatter,
+  `nixos-rebuild`/`nixos-rebuild build-vm`, lint a pod.).
+
 ## 9. Mimo rozsahu (Fáza 2 — samostatný spec)
 
 - **Modulárne lokálne web-appky** ako náhrada natívnych potrieb (prehrávač
