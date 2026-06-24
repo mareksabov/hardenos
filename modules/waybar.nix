@@ -25,14 +25,16 @@ let
     #battery.warning { color: #e5c07b; }
     #battery.critical { color: #e06c75; }
   '';
-  # waycorner: hot-edge na hornom okraji. Vstup kurzora -> SIGUSR1 (odkryje waybar),
-  # odchod -> SIGUSR1 (skryje). Výška zóny = výška lišty, aby nepadala pri prejdení naň.
+  # waycorner: hot-edge na hornom okraji. Vstup kurzora -> odkryje waybar, odchod -> skryje.
+  # Výška zóny = výška lišty, aby nepadala pri prejdení naň. Stavový súbor robí logiku
+  # idempotentnou (žiadne rozsynchronizovanie pri viacerých enter/leave po sebe).
+  # POZN.: proces je ".waybar-wrapped" (NixOS wrapper) -> pkill BEZ -x (substring).
   waycornerConfig = pkgs.writeText "waycorner.toml" ''
     [top]
     locations = ["top"]
     size = 28
-    enter_command = ["pkill", "-USR1", "-x", "waybar"]
-    exit_command = ["pkill", "-USR1", "-x", "waybar"]
+    enter_command = ["sh", "-c", "[ -e /tmp/.waybar_shown ] || pkill -USR1 waybar; touch /tmp/.waybar_shown"]
+    exit_command = ["sh", "-c", "[ -e /tmp/.waybar_shown ] && pkill -USR1 waybar; rm -f /tmp/.waybar_shown"]
     timeout_ms = 0
   '';
 in
@@ -44,14 +46,15 @@ in
   environment.etc."waycorner/config.toml".source = waycornerConfig;
 
   environment.etc."sway/config.d/waybar.conf".text = ''
-    # waybar v "hide" móde (bez rezervovaného miesta), po štarte raz skrytý.
+    # waybar v "hide" móde (bez rezervovaného miesta), po štarte raz skrytý
+    # (a vyčistíme stavový súbor -> štartovací stav = skrytá).
     exec waybar
-    exec sleep 1 && pkill -SIGUSR1 waybar
+    exec sleep 1 && pkill -USR1 waybar && rm -f /tmp/.waybar_shown
 
     # hover-reveal cez waycorner hot-edge na hornom okraji
     exec waycorner --config /etc/waycorner/config.toml
 
     # garantovaný fallback: $mod+b toggle viditeľnosti
-    bindsym $mod+b exec pkill -SIGUSR1 waybar
+    bindsym $mod+b exec pkill -USR1 waybar
   '';
 }
