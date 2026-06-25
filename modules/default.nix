@@ -6,5 +6,6 @@
     ./browser.nix
     ./terminal.nix
     ./waybar.nix
+    ./adblock.nix
   ];
 }
