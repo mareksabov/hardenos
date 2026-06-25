@@ -1,7 +1,7 @@
 # Browser-Centric NixOS — Dizajn (Fáza 1)
 
 **Dátum:** 2026-06-24
-**Stav:** Schválený dizajn, pred písaním implementačného plánu
+**Stav:** ✅ Implementované — Fáza 1 kompletná (k 2026-06-25). Implementačný plán: `docs/superpowers/plans/2026-06-24-browser-centric-nixos-phase1.md`. Tento dokument ostáva ako pôvodný dizajn; sekcia 10 nižšie zhŕňa, ako sa otvorené otázky reálne vyriešili.
 
 ## 1. Cieľ a filozofia
 
@@ -123,9 +123,19 @@ Vývoj prebieha na **M3 MacBooku Pro (aarch64)**, cieľový notebook je
   **nie Docker** (Docker daemon beží ako root = veľký attack surface, ide proti
   hardening filozofii).
 
-## 10. Otvorené otázky pre implementačný plán
+## 10. Otvorené otázky — ako sa vyriešili
 
-- Konkrétny bootloader (systemd-boot vs GRUB) a disk layout pre VM aj laptop.
-- Mechanizmus binary cache pre chromium (cachix vlastný vs verejné cache).
-- Presný glue mechanizmus pre auto-hide lištu na hover.
-- Štruktúra flaku — rozdelenie zdieľaných modulov vs host-specific.
+- **Bootloader + disk layout:** `systemd-boot` (UEFI) pre oba hosty. VM disk = GPT
+  (512M ESP `BOOT` + zvyšok ext4 `nixos`), by-label fileSystems.
+- **Binary cache pre chromium:** verejná `cache.nixos.org` stačila —
+  `ungoogled-chromium` sa sťahuje z cache (~128 MiB), NEkompiluje sa. Vlastný
+  cachix netreba.
+- **Auto-hide lišta na hover:** **waycorner** (hot-edge "top", layer-shell) volá
+  helper `os-bar show/hide`, ktorý beží na **start/kill modeli** — skutočný stav =
+  beží proces `waybar` (`pgrep`), žiadne sledovanie premennej. Pôvodný nápad
+  (skript sledujúci pozíciu kurzora cez `swaymsg`) sa zahodil, lebo sa
+  rozsynchronizovával.
+- **Štruktúra flaku:** zdieľaný `modules/` (base, hardening, sway, browser,
+  terminal, waybar, adblock) + `hosts/{vm,laptop}` s host-specific časťami
+  (hardware, hostname). Každý zdieľaný modul musí evaluovať pre obe architektúry
+  **bez buildu** (žiadne IFD — viď Task 7 v pláne).

@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **STAV (k 2026-06-25): ✅ FÁZA 1 KOMPLETNÁ — všetkých 9 taskov hotových a overených vo VM.** Build/test prebehol v aarch64 UTM VM, repo je v sync na `origin/main`. Reálne nasadenie na x86_64 notebook (Dell Latitude E5540) ešte NEprebehlo — laptop host iba evaluuje, `hardware-configuration.nix` je stále placeholder.
+>
+> **Odchýlky od pôvodného plánu (implementácia sa líši od textu nižšie):**
+> 1. **Task 6 (waybar hover):** plánovaný `os-bar-hover` skript sledujúci pozíciu kurzora cez `swaymsg` sa NEosvedčil (rozsynchronizovával sa). Finálne riešenie = **waycorner** (hot-edge "top", layer-shell) + **start/kill model** v helperi `os-bar` (skutočný stav = beží proces `waybar` cez `pgrep`, žiadne sledovanie premennej/markera). `$mod+b` = toggle. Hover overený živo.
+> 2. **Task 7 (adblock):** plánovaný IFD (`builtins.readFile (pkgs.runCommand ...)`) sa zahodil — IFD si vynucuje **build derivácie pre cieľovú architektúru** pri evaluácii, čím sa x86_64 laptop host NEDAL evaluovať na aarch64 VM. Finálne = filter v **čistom Nixe** (`splitString`/`filter`/`hasPrefix`). Pravidlo: **žiadne IFD v zdieľaných moduloch.**
+> 3. **Display fix (mimo plánu):** `hosts/vm/default.nix` má `WLR_NO_HARDWARE_CURSORS=1` + `output Virtual-1 mode 1920x1200` (UTM/virtio-gpu — inak prevrátený/odsadený kurzor a zlý pomer strán). UTM host-side: Display → Upscaling → **Linear**.
+> 4. **Dev loop:** GIT (nie scp/shared folder) — edit na Macu → commit → push → vo VM `git fetch && git reset --hard origin/main` → `nixos-rebuild switch`. Repo vo VM v `~/os`. SSH zapnuté na vm hoste pre tento loop.
+
 **Goal:** Postaviť minimálny, hardened, deklaratívny NixOS, ktorý nabootuje rovno do sway s fullscreen ungoogled-chromium, per-workspace izoláciou, foot terminálom, auto-hide waybar lištou a systémovým adblockom — buildovateľný pre aarch64 VM (vývoj) aj x86_64 laptop (nasadenie).
 
 **Architecture:** Jeden flake so zdieľaným modulovým stromom (`modules/`) a dvoma hostmi (`hosts/vm` = aarch64, `hosts/laptop` = x86_64). Konfigurácia je čisté NixOS (bez home-manager); user dotfiles (sway/waybar/foot) sa píšu deklaratívne cez `environment.etc` a program moduly. Build aj test prebiehajú **vo vnútri NixOS aarch64 VM v UTM**, lebo macOS nevie buildovať Linux closury.
@@ -66,7 +74,7 @@ Postaví UTM aarch64 NixOS VM ako build/test prostredie a minimálny flake, ktor
 **Interfaces:**
 - Produces: `nixosConfigurations.vm` (aarch64) a `nixosConfigurations.laptop` (x86_64) ako flake outputs; `modules/default.nix` agregátor importovaný oboma hostmi; devShell pre darwin aj linux.
 
-- [ ] **Step 1: Nainštaluj NixOS aarch64 do UTM**
+- [x] **Step 1: Nainštaluj NixOS aarch64 do UTM**
 
 V UTM vytvor novú **Virtualize → Linux** VM (nie Emulate), priradí ~4 CPU, 4–8 GB RAM, 20+ GB disk, povol UEFI. Nabootuj z **NixOS minimal aarch64 ISO** (`https://nixos.org/download` → ARM64). Po boote z ISO:
 
@@ -86,7 +94,7 @@ mount /dev/disk/by-label/BOOT /mnt/boot
 nixos-generate-config --root /mnt
 ```
 
-- [ ] **Step 2: Over že hardware-configuration vznikol a skopíruj ho do repa**
+- [x] **Step 2: Over že hardware-configuration vznikol a skopíruj ho do repa**
 
 ```bash
 cat /mnt/etc/nixos/hardware-configuration.nix
@@ -116,7 +124,7 @@ nixos-install   # nastav root heslo na výzvu
 reboot
 ```
 
-- [ ] **Step 3: Sprístupni repo vo VM (shared folder alebo git)**
+- [x] **Step 3: Sprístupni repo vo VM (shared folder alebo git)**
 
 Preferované: v UTM nastav **Shared Directory** (SPICE/VirtFS) na adresár repa na Macu a vo VM ho mountni:
 ```bash
@@ -126,13 +134,13 @@ sudo mount -t virtiofs share /mnt/repo   # názov tagu podľa UTM (často "share
 ```
 Fallback ak shared folder zlyhá: `git clone` repa cez SSH/GitHub do `~/os` vo VM a iteruj cez `git pull`. Pre zvyšok plánu predpokladáme, že repo je vo VM dostupné v `~/os` (symlink na `/mnt/repo` alebo klon).
 
-- [ ] **Step 4: Napíš `.envrc`**
+- [x] **Step 4: Napíš `.envrc`**
 
 ```bash
 use flake
 ```
 
-- [ ] **Step 5: Napíš `flake.nix`**
+- [x] **Step 5: Napíš `flake.nix`**
 
 ```nix
 {
@@ -168,7 +176,7 @@ use flake
 }
 ```
 
-- [ ] **Step 6: Napíš `modules/default.nix` (zatiaľ len base)**
+- [x] **Step 6: Napíš `modules/default.nix` (zatiaľ len base)**
 
 ```nix
 {
@@ -178,7 +186,7 @@ use flake
 }
 ```
 
-- [ ] **Step 7: Napíš `modules/base.nix`**
+- [x] **Step 7: Napíš `modules/base.nix`**
 
 ```nix
 { config, pkgs, lib, ... }:
@@ -208,7 +216,7 @@ use flake
 }
 ```
 
-- [ ] **Step 8: Napíš `hosts/vm/default.nix`**
+- [x] **Step 8: Napíš `hosts/vm/default.nix`**
 
 ```nix
 { ... }:
@@ -220,7 +228,7 @@ use flake
 ```
 A skopíruj reálny `hardware-configuration.nix` z `/etc/nixos/hardware-configuration.nix` (vygenerovaný v Step 1) do `hosts/vm/hardware-configuration.nix`.
 
-- [ ] **Step 9: Vytvor placeholder `hosts/laptop/` aby flake evaluoval**
+- [x] **Step 9: Vytvor placeholder `hosts/laptop/` aby flake evaluoval**
 
 `hosts/laptop/default.nix`:
 ```nix
@@ -243,7 +251,7 @@ A skopíruj reálny `hardware-configuration.nix` z `/etc/nixos/hardware-configur
 }
 ```
 
-- [ ] **Step 10: Over že flake evaluuje (red → green)**
+- [x] **Step 10: Over že flake evaluuje (red → green)**
 
 Vo VM v `~/os`:
 ```bash
@@ -251,14 +259,14 @@ nix flake check --no-build
 ```
 Expected (red, ak chýba súbor/syntax): chyba. (green): bez chýb pre oba hosty.
 
-- [ ] **Step 11: Postav a prepni VM na flake config**
+- [x] **Step 11: Postav a prepni VM na flake config**
 
 ```bash
 sudo nixos-rebuild switch --flake ~/os#vm
 ```
 Expected: build prejde, systém sa prepne. Po reboote sa prihlásiš ako `marky`.
 
-- [ ] **Step 12: Over autologin usera a flakes**
+- [x] **Step 12: Over autologin usera a flakes**
 
 ```bash
 whoami            # marky (po prihlásení)
@@ -266,7 +274,7 @@ nix --version     # nix s flake podporou
 ```
 Expected: user existuje, `nix` funguje.
 
-- [ ] **Step 13: Commit**
+- [x] **Step 13: Commit**
 
 ```bash
 git add flake.nix flake.lock modules/default.nix modules/base.nix \
@@ -289,7 +297,7 @@ Pridá bezpečnostné minimum: firewall, sysctl hardening, `doas` namiesto `sudo
 - Consumes: `users.users.marky` z `base.nix`.
 - Produces: `doas` ako priv-escalation (wheel group); aktívny firewall (default deny in).
 
-- [ ] **Step 1: Napíš `modules/hardening.nix`**
+- [x] **Step 1: Napíš `modules/hardening.nix`**
 
 ```nix
 { config, pkgs, lib, ... }:
@@ -332,7 +340,7 @@ Pridá bezpečnostné minimum: firewall, sysctl hardening, `doas` namiesto `sudo
 }
 ```
 
-- [ ] **Step 2: Zaregistruj modul v `modules/default.nix`**
+- [x] **Step 2: Zaregistruj modul v `modules/default.nix`**
 
 ```nix
 {
@@ -343,14 +351,14 @@ Pridá bezpečnostné minimum: firewall, sysctl hardening, `doas` namiesto `sudo
 }
 ```
 
-- [ ] **Step 3: Build (red → green)**
+- [x] **Step 3: Build (red → green)**
 
 ```bash
 sudo nixos-rebuild switch --flake ~/os#vm
 ```
 Expected: prejde. (Ak si predtým používal `ssh` na sync, prepni na shared folder — `openssh` je teraz default off.)
 
-- [ ] **Step 4: Over hardening**
+- [x] **Step 4: Over hardening**
 
 ```bash
 doas whoami                         # root (po hesle)
@@ -359,7 +367,7 @@ sudo true 2>&1 || echo "sudo gone"  # sudo neexistuje
 ```
 Expected: `doas` funguje, sysctl = 1, `sudo` chýba.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add modules/hardening.nix modules/default.nix
@@ -380,7 +388,7 @@ Nabootuje rovno do sway (zatiaľ prázdny). greetd spraví autologin a spustí s
 - Consumes: `users.users.marky`.
 - Produces: bežiaci sway na TTY1 po boote; sway config v `/etc/sway/config`; env premenná `SWAYSOCK` dostupná pre neskoršie skripty.
 
-- [ ] **Step 1: Napíš `modules/sway.nix`**
+- [x] **Step 1: Napíš `modules/sway.nix`**
 
 ```nix
 { config, pkgs, lib, ... }:
@@ -436,7 +444,7 @@ in
 }
 ```
 
-- [ ] **Step 2: Zaregistruj modul**
+- [x] **Step 2: Zaregistruj modul**
 
 ```nix
 {
@@ -448,7 +456,7 @@ in
 }
 ```
 
-- [ ] **Step 3: Build a reboot (red → green)**
+- [x] **Step 3: Build a reboot (red → green)**
 
 Red (pred): po boote textová konzola. Green (po):
 ```bash
@@ -457,7 +465,7 @@ reboot
 ```
 Expected po reboote: čierna sway obrazovka (prázdna, bez appiek) namiesto konzoly.
 
-- [ ] **Step 4: Over že sway beží**
+- [x] **Step 4: Over že sway beží**
 
 V sway otvor TTY (`Ctrl+Alt+F2`), prihlás sa a:
 ```bash
@@ -466,7 +474,7 @@ ls $XDG_RUNTIME_DIR/sway-ipc.* 2>/dev/null || echo "check SWAYSOCK in session"
 ```
 Expected: sway proces beží pre `marky`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add modules/sway.nix modules/default.nix
@@ -487,7 +495,7 @@ Pridá browser a skript, ktorý na danom workspace spustí chromium s vlastným 
 - Consumes: sway IPC (`swaymsg`), `$XDG_CURRENT_DESKTOP`.
 - Produces: príkaz `os-browser <n>` (na PATH), ktorý otvorí chromium s profilom `~/.local/share/os-browser/ws<n>`; keybindings `$mod+Return` (browser na aktuálnom ws) a autostart na ws1.
 
-- [ ] **Step 1: Napíš `modules/browser.nix`**
+- [x] **Step 1: Napíš `modules/browser.nix`**
 
 ```nix
 { config, pkgs, lib, ... }:
@@ -523,7 +531,7 @@ in
 }
 ```
 
-- [ ] **Step 2: Zaregistruj modul**
+- [x] **Step 2: Zaregistruj modul**
 
 ```nix
 {
@@ -536,7 +544,7 @@ in
 }
 ```
 
-- [ ] **Step 3: Build (red → green)**
+- [x] **Step 3: Build (red → green)**
 
 Red: prázdny sway. Green:
 ```bash
@@ -545,7 +553,7 @@ reboot
 ```
 Expected po reboote: workspace 1 sa otvorí s fullscreen chromium.
 
-- [ ] **Step 4: Over izoláciu profilov**
+- [x] **Step 4: Over izoláciu profilov**
 
 `$mod+2` (prepni na ws2), `$mod+Return` (otvor browser tam). Potom z TTY:
 ```bash
@@ -553,7 +561,7 @@ ls ~/.local/share/os-browser/
 ```
 Expected: existujú samostatné adresáre `ws1` a `ws2` → oddelené profily/sessions.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add modules/browser.nix modules/default.nix
@@ -574,7 +582,7 @@ Pridá natívny terminál a vývojárske nástroje s keybindingom.
 - Consumes: sway keybinding mechanizmus.
 - Produces: `foot` na PATH; keybinding `$mod+t` otvorí terminál; dostupné `neovim`, `git`, `tmux`.
 
-- [ ] **Step 1: Napíš `modules/terminal.nix`**
+- [x] **Step 1: Napíš `modules/terminal.nix`**
 
 ```nix
 { config, pkgs, lib, ... }:
@@ -593,7 +601,7 @@ Pridá natívny terminál a vývojárske nástroje s keybindingom.
 }
 ```
 
-- [ ] **Step 2: Zaregistruj modul**
+- [x] **Step 2: Zaregistruj modul**
 
 ```nix
 {
@@ -607,14 +615,14 @@ Pridá natívny terminál a vývojárske nástroje s keybindingom.
 }
 ```
 
-- [ ] **Step 3: Build (red → green)**
+- [x] **Step 3: Build (red → green)**
 
 ```bash
 sudo nixos-rebuild switch --flake ~/os#vm
 ```
 Red pred: `$mod+t` nič. Green po: `$mod+t` otvorí foot.
 
-- [ ] **Step 4: Over terminál a gestá**
+- [x] **Step 4: Over terminál a gestá**
 
 V sway stlač `$mod+t` → otvorí sa foot. V ňom:
 ```bash
@@ -623,7 +631,7 @@ git --version
 ```
 Expected: oba nástroje fungujú. Otestuj aj 3-prstový swipe (ak UTM prepošle touchpad gestá) alebo `Ctrl+Shift+Right` → prepne workspace.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add modules/terminal.nix modules/default.nix
@@ -644,7 +652,7 @@ Pridá tenkú lištu s hodinami/batériou/wifi, skrytú by default, ktorá sa od
 - Consumes: sway IPC; waybar príjma signál `SIGUSR1` na toggle viditeľnosti.
 - Produces: waybar spustený zo sway; glue skript `os-bar-hover`, ktorý sleduje Y pozíciu kurzora a togluje lištu.
 
-- [ ] **Step 1: Napíš `modules/waybar.nix`**
+- [x] **Step 1: Napíš `modules/waybar.nix`**
 
 ```nix
 { config, pkgs, lib, ... }:
@@ -709,7 +717,7 @@ in
 
 > **Pozn. pre implementátora:** presný spôsob čítania pozície kurzora cez `swaymsg` over vo VM — API sa medzi verziami sway líši (`get_seats[].cursor.pos` vs iné). Ak hover-reveal nefunguje spoľahlivo, ponechaj funkčný `$mod+b` modifier-reveal (Step 4) ako akceptované minimum a hover dolaď ako samostatný commit. Toto je jediná časť plánu so známou neistotou.
 
-- [ ] **Step 2: Zaregistruj modul**
+- [x] **Step 2: Zaregistruj modul**
 
 ```nix
 {
@@ -724,7 +732,7 @@ in
 }
 ```
 
-- [ ] **Step 3: Build (red → green)**
+- [x] **Step 3: Build (red → green)**
 
 ```bash
 sudo nixos-rebuild switch --flake ~/os#vm
@@ -732,12 +740,12 @@ reboot
 ```
 Expected: lišta je skrytá; objaví sa pri kurzore na hornom okraji (alebo `$mod+b`).
 
-- [ ] **Step 4: Over lištu**
+- [x] **Step 4: Over lištu**
 
 Stlač `$mod+b` → lišta sa zobrazí s hodinami/batériou/wifi. Pohni myšou hore → reveal; dole → skryje sa.
 Expected: aspoň `$mod+b` reveal funguje vždy; hover reveal funguje ak swaymsg API sedí.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add modules/waybar.nix modules/default.nix
@@ -758,7 +766,7 @@ Pridá hosts-based blocklist na úrovni systému — platí pre všetky inštanc
 - Consumes: nič (systémová sieťová vrstva).
 - Produces: `networking.extraHosts` naplnené StevenBlack blocklistom; známe ad domény rezolvujú na `0.0.0.0`.
 
-- [ ] **Step 1: Napíš `modules/adblock.nix`**
+- [x] **Step 1: Napíš `modules/adblock.nix`**
 
 ```nix
 { config, pkgs, lib, ... }:
@@ -778,7 +786,7 @@ in
 }
 ```
 
-- [ ] **Step 2: Zaregistruj modul**
+- [x] **Step 2: Zaregistruj modul**
 
 ```nix
 {
@@ -794,7 +802,7 @@ in
 }
 ```
 
-- [ ] **Step 3: Získaj reálny hash a build (red → green)**
+- [x] **Step 3: Získaj reálny hash a build (red → green)**
 
 Red (pred): placeholder hash → build padne s „hash mismatch", výpis ukáže reálny `got:`. Skopíruj `got:` hash do `hash = ...` a:
 ```bash
@@ -802,7 +810,7 @@ sudo nixos-rebuild switch --flake ~/os#vm
 ```
 Expected po oprave hashu: build prejde.
 
-- [ ] **Step 4: Over blokovanie**
+- [x] **Step 4: Over blokovanie**
 
 ```bash
 grep -c '^0\.0\.0\.0 ' /etc/hosts          # tisíce riadkov
@@ -810,7 +818,7 @@ getent hosts doubleclick.net               # 0.0.0.0
 ```
 Expected: `/etc/hosts` obsahuje blocklist; známa ad doména rezolvuje na `0.0.0.0`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add modules/adblock.nix modules/default.nix
@@ -831,7 +839,7 @@ Doladí x86_64 host tak, aby flake evaluoval a buildol pre obe architektúry (la
 - Consumes: `modules/default.nix` (zdieľané so `vm`).
 - Produces: `nixosConfigurations.laptop` evaluuje a `nix flake check` prejde pre oba hosty.
 
-- [ ] **Step 1: Doplň `hosts/laptop/default.nix`**
+- [x] **Step 1: Doplň `hosts/laptop/default.nix`**
 
 ```nix
 { ... }:
@@ -843,7 +851,7 @@ Doladí x86_64 host tak, aby flake evaluoval a buildol pre obe architektúry (la
 }
 ```
 
-- [ ] **Step 2: Over evaluáciu oboch hostov (red → green)**
+- [x] **Step 2: Over evaluáciu oboch hostov (red → green)**
 
 ```bash
 nix flake check
@@ -854,7 +862,7 @@ Expected: obe `nix eval` vrátia drv cestu (config evaluuje pre obe architektúr
 
 > **Pozn.:** Reálny x86_64 build (`nixos-rebuild build --flake .#laptop`) sa spustí až na notebooku po nainštalovaní NixOS a nahradení placeholder `hardware-configuration.nix` reálnym výstupom `nixos-generate-config`. Vo VM (aarch64) sa x86_64 closure plne nestavia.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add hosts/laptop/default.nix flake.nix
@@ -874,7 +882,7 @@ Open-source projekt potrebuje, aby si to ktokoľvek rozchodil. Zdokumentuj setup
 - Consumes: celý repo.
 - Produces: `README.md` s reprodukovateľnými krokmi.
 
-- [ ] **Step 1: Napíš `README.md`**
+- [x] **Step 1: Napíš `README.md`**
 
 ```markdown
 # Browser-Centric NixOS
@@ -909,12 +917,12 @@ NixOS aarch64 VM v UTM**:
 `direnv allow` (potrebuje direnv + nix-direnv) načíta `nix develop`.
 ```
 
-- [ ] **Step 2: Over že README sedí s realitou**
+- [x] **Step 2: Over že README sedí s realitou**
 
 Prejdi klávesy v README oproti `modules/sway.nix`, `browser.nix`, `terminal.nix`, `waybar.nix`.
 Expected: každá zmienená klávesa existuje v configu.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add README.md
