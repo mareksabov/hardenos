@@ -3,17 +3,37 @@ let
   # spustí chromium s profilom podľa čísla workspace (per-workspace izolácia)
   osBrowser = pkgs.writeShellApplication {
     name = "os-browser";
-    runtimeInputs = [ pkgs.ungoogled-chromium ];
+    runtimeInputs = [ pkgs.ungoogled-chromium pkgs.bubblewrap ];
     text = ''
       ws="''${1:-1}"
-      profile="$HOME/.local/share/os-browser/ws''${ws}"
+      base="$HOME/.local/share/os-browser"
+      profile="$base/ws''${ws}"
       mkdir -p "$profile"
-      exec chromium \
-        --user-data-dir="$profile" \
-        --ozone-platform=wayland \
-        --start-maximized \
-        --no-first-run \
-        --no-default-browser-check
+      # bubblewrap: tmpfs cez $HOME → ~/.ssh, ~/os a dotfiles ZMIZNÚ z view;
+      # bind-ne sa len profil + nutné systémové cesty. chromium si VNÚTRI vytvorí
+      # vlastný namespace sandbox (potrebuje allowUserNamespaces=true z baseline).
+      # fail-closed: ak bwrap zlyhá, exec zlyhá a browser sa nespustí.
+      exec bwrap \
+        --ro-bind /nix/store /nix/store \
+        --ro-bind /run/current-system /run/current-system \
+        --ro-bind /etc /etc \
+        --ro-bind /sys /sys \
+        --proc /proc \
+        --dev /dev \
+        --dev-bind-try /dev/dri /dev/dri \
+        --tmpfs /tmp \
+        --tmpfs /dev/shm \
+        --tmpfs "$HOME" \
+        --bind "$base" "$base" \
+        --bind /run/user/1000 /run/user/1000 \
+        --die-with-parent \
+        --unshare-pid \
+        chromium \
+          --user-data-dir="$profile" \
+          --ozone-platform=wayland \
+          --start-maximized \
+          --no-first-run \
+          --no-default-browser-check
     '';
   };
 
