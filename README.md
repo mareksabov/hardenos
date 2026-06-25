@@ -92,11 +92,11 @@ V `hosts/vm/default.nix`:
 
 | Klávesa | Akcia |
 |---|---|
-| `Mod+Return` | browser (izolovaný profil podľa čísla workspace) |
+| `Mod+Return` | browser na aktuálnom workspace (izolovaný profil podľa čísla) |
 | `Mod+t` | terminál (foot) |
-| `Mod+1..4` | prepni na workspace 1–4 |
-| `Ctrl+Shift+←/→` | predošlý / ďalší workspace |
-| 3-prstový swipe ←/→ | ďalší / predošlý workspace |
+| `Mod+Shift+←/→` | predošlý / ďalší desktop (`→` za posledným vytvorí nový + browser) |
+| `Mod+1..4` | skok na desktop 1–4 (ak číslo nové → vytvorí + browser) |
+| 3-prstový swipe ←/→ | ďalší / predošlý desktop |
 | `Mod+b` | toggle lišty |
 | `Mod+Shift+q` | zavri okno |
 | `Mod+Shift+e` | ukonči sway |
