@@ -48,9 +48,10 @@ security.allowUserNamespaces = true;
   Plný hardened kernel je kandidát až na reálny Dell.
 - **Browser-aware:** každý control prejde akceptačnou bránou „chromium beží so
   sandboxom".
-- **Lockdown LSM = `integrity`** (nie `confidentiality`). Integrity blokuje
-  modifikáciu bežiaceho kernelu; confidentiality navyše blokuje čítanie kernel
-  pamäte, ale môže rozbiť debug/hibernáciu — pre tento kúsok zbytočné riziko.
+- **Lockdown LSM — ODLOŽENÉ** (pôvodne `integrity`). Pri VM verifikácii sa zistilo,
+  že stock NixOS kernel lockdown LSM nemá skompilovaný (`CONFIG_SECURITY_LOCKDOWN_LSM
+  is not set`) → nedá sa aktivovať bez rekompilácie kernelu. Patrí k hardened-kernel /
+  reálny Dell tracku. Viz §3.C a §7.
 - **`security.lockKernelModules` ODLOŽENÉ** v rámci tohto kúsku — zapne sa až po
   sub-projekte 3 (egress), lebo nftables potrebuje načítať nf moduly; lock by sa
   s tým pobil bez preloadu. Odložené vedome, nie zabudnuté.
@@ -83,21 +84,19 @@ Všetky browser-safe. Pri každom: **čo / proti čomu / pozn.**
 `rp_filter=1` *(už je)*. **Proti čomu:** MITM cez ICMP redirecty, IP spoofing,
 source-routing triky, SYN-flood.
 
-### C. Kernel image / lockdown
-- `security.lsm = [ "lockdown" ]` — **zapne lockdown LSM**. Bez tohto NixOS lockdown
-  neaktivuje (viď pozn. nižšie).
-- `boot.kernelParams = [ "lockdown=integrity" ]` — nastaví lockdown na integrity režim.
-  **Proti čomu:** zápis do `/dev/mem`, `/dev/kmem`, nepodpísané moduly, ďalšie cesty
-  ako modifikovať bežiaci kernel.
+### C. Kernel image
 - Kexec zhodíme cez sysctl `kernel.kexec_load_disabled = 1` (skupina A). **Proti
   čomu:** popnutý root nenahradí bežiaci kernel cez kexec.
 
-> **Pozn. k zápisu (overené vo VM):** NixOS stavia `lsm=` z `security.lsm` (default
-> `landlock,yama,bpf`) — lockdown tam **NIE je**, takže samotný `lockdown=integrity`
-> kernelParam sa **ignoruje** (`dmesg`: „Unknown kernel command line parameters"),
-> `/sys/kernel/security/lockdown` ani nevznikne. Preto treba `security.lsm =
-> [ "lockdown" ]` (zlúči sa s defaultom). NEpoužívame `security.protectKernelImage` —
-> tá by vynútila `lockdown=confidentiality`, proti nášmu rozhodnutiu (`integrity`).
+> **Lockdown LSM — ODLOŽENÉ (zistené pri VM verifikácii).** Pôvodne sme chceli
+> `lockdown=integrity`. Stock NixOS kernel ho ale **nemá skompilovaný**
+> (`# CONFIG_SECURITY_LOCKDOWN_LSM is not set`), takže sa nedá aktivovať bez
+> rekompilácie kernelu — ani cez `security.lsm = [ "lockdown" ]` + `lockdown=integrity`
+> (cmdline aj `lsm=` boli správne, ale kód LSM v kerneli chýba: `dmesg` „Unknown
+> kernel command line parameters", `/sys/kernel/security/lockdown` nevznikol).
+> Lockdown preto patrí k **hardened-kernel / reálny Dell** tracku, nie do
+> stock-kernel baseline. (Aj `security.protectKernelImage` je mimo — vynútila by
+> `lockdown=confidentiality` a rovnako potrebuje lockdown v kerneli.)
 
 ### D. Surface reduction
 - `boot.blacklistedKernelModules = [ "dccp" "sctp" "rds" "tipc" "cramfs"
@@ -109,21 +108,24 @@ source-routing triky, SYN-flood.
   nevypíše pamäť — vrátane secretov — na disk.
 
 ## 4. Súbory
-- Modify: `modules/hardening.nix` — pridať sysctl skupiny A+B, sekciu C (protectKernelImage,
-  kernelParams), D (blacklist, coredump). Zachovať existujúce (doas, firewall, gc).
+- Modify: `modules/hardening.nix` — sysctl skupiny A+B, sekcia C (kexec cez sysctl;
+  lockdown odložený), D (blacklist modulov, coredump off). Zachovať existujúce
+  (doas, firewall, gc).
 - Create: `docs/hardening.md` — čitateľská rationale dokumentácia (viď §6).
-- Bez zmeny: hosty (kernelParams sa aplikujú cez shared modul na oba).
+- Bez zmeny: hosty.
 
 ## 5. Verifikácia (vo VM, cez SSH — žiadne unit testy)
 
 1. **Arch-nezávislosť:** `nix eval` vm aj laptop bez buildu (čistý Nix, žiadny IFD).
-2. **Reboot, nie reload:** `lockdown=` a `protectKernelImage` (kernelParams) chcú
-   **reboot**. Postup: switch → `reboot` → over.
+2. **Aplikácia:** sysctl + coredump sa aplikujú pri `switch`; blacklist modulov sa
+   prejaví po reboote (ak by boli načítané — tu nie sú). Lockdown (kernelParam) je
+   odložený, takže baseline **reboot nevyžaduje** (reboot bol potrebný len na
+   dôkaz, že stock kernel lockdown nepodporuje).
 3. **Controls aktívne:**
-   - `sysctl <key>` = očakávaná hodnota (každý kľúč z A+B).
-   - `cat /sys/kernel/security/lockdown` → `... [integrity] ...`.
+   - `sysctl <key>` = očakávaná hodnota (každý kľúč z A+B; `bpf_jit_harden` čitateľný
+     len ako root — efekt `unprivileged_bpf_disabled=1`).
    - `cat /proc/sys/kernel/kexec_load_disabled` → `1`.
-   - `lsmod` neukáže blacklistnuté moduly; `cat /proc/sys/kernel/core_pattern` nezapisuje core.
+   - `lsmod` neukáže blacklistnuté moduly; `systemd-coredump.socket` je inactive.
 4. **AKCEPTAČNÁ BRÁNA — chromium sandbox neporušený:**
    - `os-browser` nabehne **bez** `--no-sandbox` a bez „No usable sandbox!".
    - `chrome://sandbox` / `chrome://gpu` ukáže aktívny namespace sandbox; existujú
@@ -146,8 +148,10 @@ nie afterthought.
   reboot, nie switch/reload".
 
 ## 7. Mimo rozsahu (YAGNI / odložené)
+- **Lockdown LSM** (`integrity`/`confidentiality`) — stock kernel ho nemá
+  skompilovaný (`CONFIG_SECURITY_LOCKDOWN_LSM` not set); vyžaduje hardened/custom
+  kernel → tracku reálneho Dellu.
 - `security.lockKernelModules` (až po egress sub-projekte).
-- Plný `linuxPackages_hardened` (kandidát na reálny Dell).
+- Plný `linuxPackages_hardened` (kandidát na reálny Dell — prinesie aj lockdown).
 - AppArmor/SELinux MAC (samostatný budúci kúsok, ak vôbec).
 - Disk encryption, secure boot, TPM (HW-viazané, odložené na Dell).
-- `lockdown=confidentiality` (prísnejšie, ale zbytočné riziko teraz).

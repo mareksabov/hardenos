@@ -63,16 +63,11 @@
     "net.ipv4.icmp_echo_ignore_broadcasts" = 1;  # neodpovedaj na broadcast ping
   };
 
-  # Lockdown LSM (integrity): blokuje modifikáciu bežiaceho kernelu (/dev/mem,
-  # nepodpísané moduly, …). POZOR: kernelParam → aplikuje sa až po REBOOTE.
-  # NEpoužívame security.protectKernelImage (tá vynúti lockdown=confidentiality).
-  #
-  # KĽÚČOVÉ: NixOS stavia `lsm=` z `security.lsm` (default landlock,yama,bpf) a
-  # lockdown tam NIE je → bez tohto riadku kernel `lockdown=integrity` IGNORUJE
-  # ("Unknown kernel command line parameters"). Pridaním lockdown do LSM zoznamu
-  # sa LSM zapne a `lockdown=integrity` nastaví režim.
-  security.lsm = [ "lockdown" ];
-  boot.kernelParams = [ "lockdown=integrity" ];
+  # Lockdown LSM — ODLOŽENÉ (vyžaduje hardened/custom kernel).
+  # Overené vo VM: stock NixOS kernel má `# CONFIG_SECURITY_LOCKDOWN_LSM is not set`,
+  # takže lockdown sa NEDÁ aktivovať bez rekompilácie kernelu (cmdline `lockdown=` aj
+  # `lsm=` sú správne, ale kód LSM v kerneli chýba). Patrí k hardened-kernel / reálny
+  # Dell tracku, nie do stock-kernel baseline. Viz docs/hardening.md.
 
   # Surface reduction: zriedkavé protokoly/FS, ktoré OS nepoužíva = menej kódu
   # v kerneli = menší attack surface. (NEblacklistovať virtio — aarch64 VM ho chce.)
