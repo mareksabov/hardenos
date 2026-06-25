@@ -35,9 +35,30 @@ let
       fi
     '';
   };
+
+  # keď sa fokusnutý desktop vyprázdni (zavreté posledné okno), prepni na predošlý
+  # existujúci → prázdny zanikne. Posledný/jediný desktop nechaj prázdny (macOS model).
+  # Sway nemá deklaratívny hook → tenký listener na IPC window eventoch.
+  osEmptyWatcher = pkgs.writeShellApplication {
+    name = "os-empty-watcher";
+    runtimeInputs = [ pkgs.sway pkgs.jq ];
+    text = ''
+      swaymsg -t subscribe -m '["window"]' | while read -r ev; do
+        [ "$(jq -r '.change // empty' <<<"$ev")" = "close" ] || continue
+        wins="$(swaymsg -t get_tree | jq '
+          [ recurse(.nodes[]?, .floating_nodes[]?) | select(.type=="workspace" and .focused==true) ][0]
+          | [ recurse(.nodes[]?, .floating_nodes[]?) | select(.type=="con" and .pid != null) ] | length
+        ' 2>/dev/null || echo 1)"
+        total="$(swaymsg -t get_workspaces | jq 'length' 2>/dev/null || echo 1)"
+        if [ "$wins" = "0" ] && [ "$total" -gt 1 ]; then
+          swaymsg workspace prev >/dev/null
+        fi
+      done
+    '';
+  };
 in
 {
-  environment.systemPackages = [ pkgs.ungoogled-chromium osBrowser osWorkspace ];
+  environment.systemPackages = [ pkgs.ungoogled-chromium osBrowser osWorkspace osEmptyWatcher ];
 
   # keybinding + autostart cez sway config.d
   environment.etc."sway/config.d/browser.conf".text = ''
@@ -58,5 +79,8 @@ in
 
     # autostart: workspace 1 dostane browser pri štarte
     exec os-browser 1
+
+    # watcher: vyprázdnený desktop → prepni preč → zanikne (spustí sa raz pri štarte)
+    exec os-empty-watcher
   '';
 }
