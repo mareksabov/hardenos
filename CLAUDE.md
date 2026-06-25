@@ -40,6 +40,10 @@ dva hosty:
   bežiacu sway inštanciu NEreloadne** — treba `swaymsg reload` (alebo odhlásenie/
   prihlásenie), inak ostanú staré bindingy aktívne. Klasická pasca „rebuild prešiel,
   ale nič sa nezmenilo".
+- **`boot.kernelParams` (a kernel-level zmeny) sa aplikujú až po REBOOTE** — nie cez
+  `nixos-rebuild switch` ani `swaymsg reload`. Použi `nixos-rebuild boot` + reboot.
+  (Sysctl sa naopak aplikuje hneď pri `switch`.) Pozn.: kernelParam bez podpory
+  v kerneli kernel ticho zahodí do user-space (viď lockdown lekcia v `docs/hardening.md`).
 - Overenie = build + pozorovateľné správanie vo VM (žiadne unit testy).
 
 ## Konvencie a gotchy (NEZABUDNI)

@@ -135,8 +135,17 @@ direnv allow   # potrebuje direnv + nix-direnv; načíta `nix develop`
 
 ## Hardening (zhrnutie)
 
-- `doas` (wheel group) namiesto `sudo`; `sudo` je vypnuté.
-- Firewall default-deny incoming.
-- `kernel.kptr_restrict=2`, `kernel.dmesg_restrict=1`, `rp_filter=1`.
-- `nix-gc` automaticky maže generácie staršie než 14 dní.
-- Žiadne zbytočné služby; `openssh` je default off (vm host ho zapína pre dev loop).
+Browser-centric OS → attack surface koncentrovaný v chromiu. Baseline (stock kernel,
+**browser-safe** — chromium sandbox ostáva funkčný cez `security.allowUserNamespaces`)
+sťažuje únik z popnutého browsera. Plné rationale + threat model:
+**[`docs/hardening.md`](docs/hardening.md)**.
+
+- `doas` (wheel) namiesto `sudo`; `sudo` vypnuté. Firewall default-deny incoming.
+- **Sysctl** — proces/pamäť izolácia (`ptrace_scope`, `unprivileged_bpf_disabled`,
+  `perf_event_paranoid`, `kexec_load_disabled`, `protected_*`, `suid_dumpable=0`, …)
+  + sieť (anti-spoof/redirect, `tcp_syncookies`, …).
+- **Surface reduction** — blacklist nepoužívaných modulov (rare protokoly/FS),
+  `systemd.coredump` vypnuté (pád nevypíše pamäť na disk).
+- **Odložené:** lockdown LSM (stock kernel ho nemá skompilovaný → hardened-kernel
+  track), disk encryption / secure boot / TPM (reálny Dell). Viz `docs/hardening.md`.
+- `nix-gc` maže generácie staršie než 14 dní; `openssh` default off (vm ho zapína pre dev loop).
