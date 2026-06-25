@@ -36,6 +36,10 @@ dva hosty:
 - **GIT loop, NIE scp:** edit na Macu → `git commit` → `git push` → vo VM
   `cd ~/os && git fetch && git reset --hard origin/main` → `sudo nixos-rebuild switch --flake ~/os#vm`.
 - Flake je `git+file` → vidí len **git-tracked** súbory.
+- **Po zmene sway configu (keybindingy, `config.d/*`): `nixos-rebuild switch`
+  bežiacu sway inštanciu NEreloadne** — treba `swaymsg reload` (alebo odhlásenie/
+  prihlásenie), inak ostanú staré bindingy aktívne. Klasická pasca „rebuild prešiel,
+  ale nič sa nezmenilo".
 - Overenie = build + pozorovateľné správanie vo VM (žiadne unit testy).
 
 ## Konvencie a gotchy (NEZABUDNI)

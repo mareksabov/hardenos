@@ -104,6 +104,10 @@ V `hosts/vm/default.nix`:
 `Mod` = `Super` (⌘ na Macu pri UTM). Lišta je inak skrytá a **odkryje sa pri myši
 na hornom okraji** (auto-hide cez [waycorner](https://github.com/edzdez/waycorner)).
 
+> **Pozn.:** Po `nixos-rebuild switch`, ktorý mení sway config (klávesy), bežiaci
+> sway sám nereloadne — spusti **`swaymsg reload`** (alebo sa odhlás/prihlás),
+> inak ostanú staré bindingy aktívne.
+
 ## Funkcie
 
 - **Per-workspace izolácia prehliadača** — každý workspace má vlastný
