@@ -18,6 +18,8 @@ let
         --ro-bind /run/current-system /run/current-system \
         --ro-bind /etc /etc \
         --ro-bind /sys /sys \
+        --ro-bind-try /run/opengl-driver /run/opengl-driver \
+        --ro-bind-try /run/dbus /run/dbus \
         --proc /proc \
         --dev /dev \
         --dev-bind-try /dev/dri /dev/dri \
