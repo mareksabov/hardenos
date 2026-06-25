@@ -115,6 +115,10 @@ myši na hornom okraji** (auto-hide cez [waycorner](https://github.com/edzdez/wa
 - **Per-workspace izolácia prehliadača** — každý workspace má vlastný
   `--user-data-dir` profil (`~/.local/share/os-browser/ws<n>`), oddelené
   sessions/cookies.
+- **Dynamické desktopy ako macOS spaces** — `Mod+Shift+→` za posledným vytvorí
+  nový desktop a hneď naň otvorí browser; zavretie posledného okna ťa prepne na
+  predošlý desktop a prázdny zanikne (`os-empty-watcher`). Posledný desktop ostáva
+  prázdny. Profily prežijú zánik/obnovu (per číslo).
 - **Systémový adblock** — [StevenBlack hosts](https://github.com/StevenBlack/hosts)
   blocklist v `/etc/hosts` (~121k domén → `0.0.0.0`), platí pre všetky inštancie
   prehliadača naraz.
