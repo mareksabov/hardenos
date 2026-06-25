@@ -28,7 +28,7 @@ let
         prev) if [ "$current" -gt 1 ]; then target=$(( current - 1 )); else target=1; fi ;;
         *)    target="$arg" ;;
       esac
-      existed="$(swaymsg -t get_workspaces | jq "any(.num == $target)")"
+      existed="$(swaymsg -t get_workspaces | jq "any(.[]; .num == $target)")"
       swaymsg workspace number "$target"
       if [ "$existed" = "false" ]; then
         os-browser "$target"
