@@ -146,6 +146,9 @@ sťažuje únik z popnutého browsera. Plné rationale + threat model:
   + sieť (anti-spoof/redirect, `tcp_syncookies`, …).
 - **Surface reduction** — blacklist nepoužívaných modulov (rare protokoly/FS),
   `systemd.coredump` vypnuté (pád nevypíše pamäť na disk).
+- **Browser containment** — chromium beží v `bubblewrap` sandboxe (tmpfs `~`, bind len
+  profil + systém) → popnutý browser nevidí `~/.ssh`, `~/os`, dotfiles. Chromium vlastný
+  sandbox ostáva funkčný. Detail: [`docs/hardening.md`](docs/hardening.md).
 - **Odložené:** lockdown LSM (stock kernel ho nemá skompilovaný → hardened-kernel
   track), disk encryption / secure boot / TPM (reálny Dell). Viz `docs/hardening.md`.
 - `nix-gc` maže generácie staršie než 14 dní; `openssh` default off (vm ho zapína pre dev loop).

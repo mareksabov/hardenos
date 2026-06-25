@@ -61,6 +61,33 @@ redirecty, source-routing triky, SYN-flood, broadcast amplifikácia.
 | `boot.blacklistedKernelModules` = `dccp sctp rds tipc` (rare protokoly), `cramfs freevxfs jffs2 hfs hfsplus` (rare FS) | nepoužívaný kód v kerneli = zbytočná zraniteľnosť. **NEblacklistovať virtio** (aarch64 VM ho potrebuje). |
 | `systemd.coredump.enable = false` | pád procesu (napr. chromium) nevypíše pamäť — vrátane secretov — na disk |
 
+## Browser containment (bubblewrap)
+
+Popnutý chromium beží ako `marky` → bez containmentu vidí `~/.ssh` (dev kľúč!),
+`~/os`, dotfiles. `os-browser` preto spúšťa chromium vnútri **bubblewrap** sandboxu,
+ktorý postaví obmedzený FS view: **`tmpfs` cez `$HOME`**, do ktorého sa bind-ne len
+profil (`~/.local/share/os-browser`) + nutné systémové cesty. `~/.ssh`/`~/os` v tom
+view **neexistujú**.
+
+**Reálny bind-set** (overené vo VM): `--ro-bind /nix/store`, `/run/current-system`,
+`/etc`, `/sys`, `/run/opengl-driver` (GL ovládače — bez nich MESA padá),
+`/run/dbus` (system bus); `--proc /proc`, `--dev /dev`, `--dev-bind-try /dev/dri`
+(GPU); `--tmpfs /tmp /dev/shm $HOME`; `--bind ~/.local/share/os-browser`,
+`/run/user/1000` (Wayland/dbus session); `--die-with-parent --unshare-pid`.
+
+- **Sandbox ostáva:** chromium si **vnútri** bwrapu vytvorí vlastný namespace sandbox
+  (`security.allowUserNamespaces = true` z baseline to umožní). Overené: chromium
+  procesy bežia v bwrap mnt-namespace (≠ host), žiadny `--no-sandbox`, žiadne
+  „No usable sandbox!".
+- **Fail-closed:** ak bwrap zlyhá, browser sa nespustí (žiadny unconfined chromium).
+- **Overenie:** `/proc/<chromium-pid>/root/home/marky` ukáže len `.cache .config
+  .local` (ephemeral tmpfs + profil) — **`.ssh` ani `os` tam nie sú**.
+- **Mimo rozsah teraz:** desktop-od-desktopu (rovnaký uid vidí všetky ws profily),
+  sieťové obmedzenie (egress kúsok).
+- **Prečo nie landlock:** elegantnejší (on-theme), ale `landrun` sa na aarch64 VM
+  nedá overiť (nie je v cache, build self-test padá). Landlock je kandidát na reálny
+  x86_64 Dell. Bwrap je v cache a battle-tested na chromium (používa ho flatpak).
+
 ## Vedome odložené (a prečo)
 
 - **Lockdown LSM** (`integrity`) — **chceli sme ho, ale nejde na stock kerneli.**
