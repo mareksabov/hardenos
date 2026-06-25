@@ -29,10 +29,16 @@ riadok celého kúsku je preto zámerná **anti-hardening výnimka**:
 
 ```nix
 # Chromium namespace sandbox POTREBUJE unprivileged user namespaces.
-# Vypnúť ich (čo robí NixOS hardened profil) → chromium spadne na --no-sandbox,
-# čo je HORŠIE než žiadne hardening. Preto ich zámerne necháme zapnuté.
-"kernel.unprivileged_userns_clone" = 1;
+# NixOS stock kernel ich má zapnuté by default; KĽÚČOVÉ je ich NEvypnúť (čo robí
+# hardened profil / security.allowUserNamespaces=false) — inak chromium spadne na
+# --no-sandbox, čo je HORŠIE než žiadne hardening. Držíme to explicitne zapnuté:
+security.allowUserNamespaces = true;
 ```
+
+> **Pozn. k zápisu:** `kernel.unprivileged_userns_clone` je Debian/Ubuntu downstream
+> sysctl — na mainline NixOS kerneli NEEXISTUJE. Správny NixOS výraz je
+> `security.allowUserNamespaces` (default `true`); nastavíme ho explicitne ako
+> deklaratívnu poistku zámeru.
 
 ## 2. Rozhodnutia (potvrdené s userom)
 
@@ -56,11 +62,11 @@ Všetky browser-safe. Pri každom: **čo / proti čomu / pozn.**
 ### A. Sysctl — pamäť a proces-izolácia
 | Kľúč | Hodnota | Proti čomu |
 |---|---|---|
-| `kernel.unprivileged_userns_clone` | `1` | **zachovanie** chromium sandboxu (výnimka, nie hardening) |
+| `security.allowUserNamespaces` *(nie sysctl)* | `true` | **zachovanie** chromium sandboxu (výnimka, nie hardening) |
 | `kernel.yama.ptrace_scope` | `1` | popnutý proces nečíta pamäť cudzích procesov cez ptrace |
 | `kernel.unprivileged_bpf_disabled` | `1` | zatvorí častý kernel-exploit vektor (unpriv eBPF) |
 | `net.core.bpf_jit_harden` | `2` | sťaží JIT-spray útoky na BPF |
-| `kernel.perf_event_paranoid` | `3` | zamedzí unpriv perf (info-leak/exploit povrch) |
+| `kernel.perf_event_paranoid` | `2` | zamedzí unpriv perf (mainline max; `3` je downstream patch) |
 | `kernel.kexec_load_disabled` | `1` | žiadny load nového kernelu za behu |
 | `vm.unprivileged_userfaultfd` | `0` | odoberie techniku na zľahčenie use-after-free exploitov |
 | `dev.tty.ldisc_autoload` | `0` | nezavádza line-discipline moduly na požiadanie |
@@ -78,12 +84,15 @@ Všetky browser-safe. Pri každom: **čo / proti čomu / pozn.**
 source-routing triky, SYN-flood.
 
 ### C. Kernel image / lockdown
-- `security.protectKernelImage = true` — zamkne kernel image (vypne kexec, zakáže
-  hibernáciu — vo VM aj na laptope OK). **Proti čomu:** popnutý root nevymení/nepatchne
-  bežiaci kernel.
 - `boot.kernelParams = [ "lockdown=integrity" ]` — lockdown LSM v integrity režime.
   **Proti čomu:** zápis do `/dev/mem`, `/dev/kmem`, nepodpísané moduly, ďalšie cesty
   ako modifikovať bežiaci kernel.
+- Kexec zhodíme cez sysctl `kernel.kexec_load_disabled = 1` (skupina A). **Proti
+  čomu:** popnutý root nenahradí bežiaci kernel cez kexec.
+
+> **Pozn. k zápisu:** NEpoužívame `security.protectKernelImage` — tá v NixOS vynúti
+> `lockdown=confidentiality`, čo je proti nášmu rozhodnutiu (`integrity`). Rovnaký
+> kexec efekt dosiahneme cieleným sysctl, lockdown nastavíme priamo na `integrity`.
 
 ### D. Surface reduction
 - `boot.blacklistedKernelModules = [ "dccp" "sctp" "rds" "tipc" "cramfs"
