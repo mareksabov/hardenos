@@ -101,8 +101,11 @@ V `hosts/vm/default.nix`:
 | `Mod+Shift+q` | zavri okno |
 | `Mod+Shift+e` | ukonči sway |
 
-`Mod` = `Super` (⌘ na Macu pri UTM). Lišta je inak skrytá a **odkryje sa pri myši
-na hornom okraji** (auto-hide cez [waycorner](https://github.com/edzdez/waycorner)).
+`Mod` = `Control`. (Na Macu/UTM macOS preberá Cmd/⌘ skratky — napr. Cmd+Shift+Q =
+Odhlásiť sa — skôr než VM; Control sa do VM dostane vždy. Cena: Control zatieni
+niektoré in-VM skratky ako browser Ctrl+T/Ctrl+1-4 a tmux Ctrl+B.) Lišta je inak
+skrytá a **odkryje sa pri myši na hornom okraji** (auto-hide cez
+[waycorner](https://github.com/edzdez/waycorner)).
 
 > **Pozn.:** Po `nixos-rebuild switch`, ktorý mení sway config (klávesy), bežiaci
 > sway sám nereloadne — spusti **`swaymsg reload`** (alebo sa odhlás/prihlás),

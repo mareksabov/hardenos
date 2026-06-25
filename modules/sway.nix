@@ -2,7 +2,10 @@
 let
   swayConfig = pkgs.writeText "sway-config" ''
     # Minimal browser-centric sway config
-    set $mod Mod4
+    # $mod = Control: na Macu/UTM macOS preberá Cmd (⌘=Super) skratky (napr.
+    # Cmd+Shift+Q = Odhlásiť sa) skôr než VM. Control sa do VM dostane vždy.
+    # Pozn.: Control zatieni niektoré in-VM appkové skratky (browser Ctrl+T/Ctrl+1-4, tmux Ctrl+B).
+    set $mod Control
     # žiadne default app launchery — appky pridajú ďalšie moduly
 
     # základné ovládanie
