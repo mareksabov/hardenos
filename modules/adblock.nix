@@ -7,11 +7,17 @@ let
     url = "https://raw.githubusercontent.com/StevenBlack/hosts/3.14.139/hosts";
     hash = "sha256-JvFY0lv+XCTOsSK3bJi3bEQGdbFEYdCUaH23KVXSMjU=";
   };
+  # Filtruj len 0.0.0.0 riadky v ČISTOM Nixe (žiadny IFD/derivácia).
+  # Dôvod: IFD (readFile na runCommand) by si vynútil build derivácie pre cieľovú
+  # architektúru -> evaluácia x86_64 laptop hosta na aarch64 VM by chcela buildovať
+  # x86_64 grep a padla by. fetchurl je fixed-output (rovnaký store path na oboch
+  # archoch, už realizovaný), takže readFile naň je architektúrne nezávislé.
+  blocklist = lib.concatStringsSep "\n"
+    (builtins.filter (l: lib.hasPrefix "0.0.0.0 " l)
+      (lib.splitString "\n" (builtins.readFile stevenblack)));
 in
 {
-  # Extrahuj len 0.0.0.0 riadky a vlož ich do /etc/hosts deklaratívne.
+  # Vlož blocklist do /etc/hosts deklaratívne.
   # Platí systémovo -> pre všetky inštancie browsera naraz.
-  networking.extraHosts = builtins.readFile (pkgs.runCommand "blocklist-hosts" { } ''
-    grep '^0\.0\.0\.0 ' ${stevenblack} > $out || true
-  '');
+  networking.extraHosts = blocklist;
 }
