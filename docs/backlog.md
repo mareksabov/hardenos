@@ -31,6 +31,13 @@ Ku každej zmene **paralelne** vznikne dokumentácia. Pri hotovej funkcii skontr
 - [ ] **Adblock, waybar auto-hide, display fix** (Fáza 1) — overiť, či majú
   dostatočnú rationale dokumentáciu, prípadne doplniť do jednotnej štruktúry.
 
+## Forward-poznámky pre ďalšie hardening kúsky
+- **Egress (sub-projekt 3):** `net.ipv4.conf.all.rp_filter = 1` (strict) je OK pre
+  single-NIC, ale pri VPN/asymetrickom routovaní môže ticho zahadzovať return pakety.
+  Zvážiť pri nftables egress dizajne.
+- **Lockdown LSM** patrí k hardened-kernel tracku (stock kernel ho nemá skompilovaný —
+  viď `docs/hardening.md`). Spolu s `linuxPackages_hardened` na reálnom Delli.
+
 ## Otvorená otázka štruktúry docs
 Zvážiť `docs/` rozloženie pre open-source čitateľa: napr. `docs/hardening.md`
 (z baseline kúsku), `docs/desktops.md`, `docs/keybindings.md`, `docs/architecture.md`
