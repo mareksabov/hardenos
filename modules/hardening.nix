@@ -63,6 +63,21 @@
     "net.ipv4.icmp_echo_ignore_broadcasts" = 1;  # neodpovedaj na broadcast ping
   };
 
+  # Lockdown LSM (integrity): blokuje modifikáciu bežiaceho kernelu (/dev/mem,
+  # nepodpísané moduly, …). POZOR: kernelParam → aplikuje sa až po REBOOTE.
+  # NEpoužívame security.protectKernelImage (tá vynúti lockdown=confidentiality).
+  boot.kernelParams = [ "lockdown=integrity" ];
+
+  # Surface reduction: zriedkavé protokoly/FS, ktoré OS nepoužíva = menej kódu
+  # v kerneli = menší attack surface. (NEblacklistovať virtio — aarch64 VM ho chce.)
+  boot.blacklistedKernelModules = [
+    "dccp" "sctp" "rds" "tipc"                   # zriedkavé sieťové protokoly
+    "cramfs" "freevxfs" "jffs2" "hfs" "hfsplus"  # zriedkavé súborové systémy
+  ];
+
+  # Pád procesu (napr. chromium) nevypíše pamäť — vrátane secretov — na disk.
+  systemd.coredump.enable = false;
+
   # Nepotrebné služby preč
   services.openssh.enable = lib.mkDefault false;
   documentation.nixos.enable = false;
