@@ -84,15 +84,20 @@ Všetky browser-safe. Pri každom: **čo / proti čomu / pozn.**
 source-routing triky, SYN-flood.
 
 ### C. Kernel image / lockdown
-- `boot.kernelParams = [ "lockdown=integrity" ]` — lockdown LSM v integrity režime.
+- `security.lsm = [ "lockdown" ]` — **zapne lockdown LSM**. Bez tohto NixOS lockdown
+  neaktivuje (viď pozn. nižšie).
+- `boot.kernelParams = [ "lockdown=integrity" ]` — nastaví lockdown na integrity režim.
   **Proti čomu:** zápis do `/dev/mem`, `/dev/kmem`, nepodpísané moduly, ďalšie cesty
   ako modifikovať bežiaci kernel.
 - Kexec zhodíme cez sysctl `kernel.kexec_load_disabled = 1` (skupina A). **Proti
   čomu:** popnutý root nenahradí bežiaci kernel cez kexec.
 
-> **Pozn. k zápisu:** NEpoužívame `security.protectKernelImage` — tá v NixOS vynúti
-> `lockdown=confidentiality`, čo je proti nášmu rozhodnutiu (`integrity`). Rovnaký
-> kexec efekt dosiahneme cieleným sysctl, lockdown nastavíme priamo na `integrity`.
+> **Pozn. k zápisu (overené vo VM):** NixOS stavia `lsm=` z `security.lsm` (default
+> `landlock,yama,bpf`) — lockdown tam **NIE je**, takže samotný `lockdown=integrity`
+> kernelParam sa **ignoruje** (`dmesg`: „Unknown kernel command line parameters"),
+> `/sys/kernel/security/lockdown` ani nevznikne. Preto treba `security.lsm =
+> [ "lockdown" ]` (zlúči sa s defaultom). NEpoužívame `security.protectKernelImage` —
+> tá by vynútila `lockdown=confidentiality`, proti nášmu rozhodnutiu (`integrity`).
 
 ### D. Surface reduction
 - `boot.blacklistedKernelModules = [ "dccp" "sctp" "rds" "tipc" "cramfs"

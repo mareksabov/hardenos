@@ -66,6 +66,12 @@
   # Lockdown LSM (integrity): blokuje modifikáciu bežiaceho kernelu (/dev/mem,
   # nepodpísané moduly, …). POZOR: kernelParam → aplikuje sa až po REBOOTE.
   # NEpoužívame security.protectKernelImage (tá vynúti lockdown=confidentiality).
+  #
+  # KĽÚČOVÉ: NixOS stavia `lsm=` z `security.lsm` (default landlock,yama,bpf) a
+  # lockdown tam NIE je → bez tohto riadku kernel `lockdown=integrity` IGNORUJE
+  # ("Unknown kernel command line parameters"). Pridaním lockdown do LSM zoznamu
+  # sa LSM zapne a `lockdown=integrity` nastaví režim.
+  security.lsm = [ "lockdown" ];
   boot.kernelParams = [ "lockdown=integrity" ];
 
   # Surface reduction: zriedkavé protokoly/FS, ktoré OS nepoužíva = menej kódu
